@@ -1,0 +1,212 @@
+#!/bin/zsh
+
+if command -v xbps-install > /dev/null 2>&1; then
+  export IS_VOID=1
+elif command -v emerge > /dev/null 2>&1; then
+  export IS_GENTO=1
+elif command -v pacman > /dev/null 2>&1; then
+  export IS_ARCH=1
+elif command -v apt-get > /dev/null 2>&1; then
+  export IS_DEBIAN=1
+elif command -v apk > /dev/null 2>&1; then
+  export IS_ALPINE=1
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+  export IS_MAC=1
+else;
+  export IS_BSD=1
+fi
+
+# Default flags
+alias rm='rm -i'
+alias chmod="chmod -R"
+alias cp='cp -R -i -v'
+alias mv='mv -i -v'
+alias mkdir='mkdir -p -v'
+alias df='df -h'
+alias du='du -h -s'
+alias dd='dd status=progress bs=4M conv=fdatasync '
+alias wgetpaste='wgetpaste -Xx'
+alias sudo='sudo '  # Makes sudo work with aliases
+alias ssh='TERM=xterm ssh'  # Fixes some issues with ssh on some terminals
+
+# Shortcuts to edit common files
+alias reload='source ~/.zshrc'
+alias zshrc="$EDITOR ~/.zshrc"
+alias zshenv="$EDITOR ~/.zshenv"
+alias zshaliases="$EDITOR ~/.zsh_aliases"
+alias vimrc="$EDITOR ~/.vimrc"
+
+# Changing dirs with just dots.
+alias .='cd ../'
+alias ..='cd ../../'
+alias ...='cd ../../../'
+alias ....='cd ../../../../'
+
+if [ "${IS_ARCH}" = "1" ]; then
+  ## Package Manager - pacman/yay
+  if command -v yay > /dev/null 2>&1; then
+    alias pi='yay -S'
+    alias pr='yay -R'
+    alias psearch='yay -Slq | fzf --multi --preview 'yay -Si {1}' | xargs -ro yay -S'
+    alias pu='yay -Syu --devel --timeupdate'
+    alias oneshot='yay -S --asdeps'
+    alias orphans="yay -Qtdq | yay -Rns -"
+  else;
+    alias pi='sudo pacman -S'
+    alias pr='sudo pacman -R'
+    alias psearch='pacman -Slq | fzf --multi --preview 'sudo pacman -Si {1}' | xargs -ro sudo pacman -S'
+    alias pu='sudo pacman -Syu'
+    alias oneshot='sudo pacman -S --asdeps'
+    alias orphans="pacman -Qtdq | sudo pacman -Rns -"
+  fi
+  alias mirrorupdate="sudo pacman-mirrors --geoip && sudo pacman -Syyu"
+  alias etc-update="sudo pacdiff"
+  alias asdep="sudo pacman -D --asdeps"
+  alias explicit="sudo pacman -D --asexplicit"
+
+elif [ "${IS_DEBIAN}" = "1" ]; then
+  ## Package Manager - apt
+  alias pi='sudo apt install'
+  alias pr='sudo apt remove'
+  alias psearch='apt search'
+  alias pu='sudo apt update && sudo apt upgrade'
+  alias orphans='apt autoremove'
+
+elif [ "${IS_GENTOO}" = "1" ]; then
+  ## Package Manager - portage/emerge
+  alias gsync='sudo eix-sync'
+  alias pi='sudo emerge -av --autounmask'
+  alias oneshot='sudo emerge -av --oneshot'
+  alias pu='sudo emerge --update --deep --with-bdeps=y --newuse --keep-going @world --ask'
+  alias pub='sudo emerge --update --deep --with-bdeps=y --newuse --keep-going @world --ask --binpkg-changed-deps'
+  alias pr='sudo emerge --depclean -av'
+  alias psearch='eix -r'
+  alias pclean='sudo qpkg -c'
+  alias howlong='sudo watch --color genlop -uic'
+  alias etcupdate='sudo -E etc-update --automode -3'
+
+elif [ "${IS_ALPINE}" = "1" ]; then
+  ## Package Manager - apk
+  alias pi='sudo apk add'
+  alias pr='sudo apk del'
+  alias psearch='sudo apk search'
+  alias pu='sudo apk update && sudo apk upgrade'
+
+elif [ "${IS_VOID}" = "1" ]; then
+  ## Package Manager - void/xpbs
+  alias pi='sudo xbps-install -S'
+  alias prr='sudo xbps-remove -R'
+  alias pr='sudo xbps-remove'
+  alias psearch='sudo xbps-query -Rs'
+  alias pu='sudo xbps-install -Su'
+  alias orphans='sudo xpbs-remove -o'
+
+elif [ "${IS_MAC}" = "1" ]; then
+  ## Package Manager - brew
+  alias pi='brew install'
+  alias pic='brew install --cask'
+  alias pr='brew uninstall'
+  alias psearch='brew search'
+  alias pu='brew update && brew upgrade'
+  alias orphans='brew autoremove'
+
+  function macwal {
+      # generate color scheme from current wallpaper
+      current_wallpaper="$(osascript -e 'tell app "finder" to get posix path of (get desktop picture as alias)')"
+      wal -i $current_wallpaper
+  }
+
+elif [ "${IS_BSD}" = 1 ]; then
+  ## Package Manager - freebsd
+  alias pi='sudo pkg install'
+  alias pr='sudo pkg remove'
+  alias psearch='sudo pkg search'
+  alias pu='sudo pkg update && sudo pkg upgrade'
+
+fi
+
+# Alias alternatives for commands if they exist
+
+if command -v colordiff > /dev/null 2>&1; then
+  alia diff="colordiff -Nuar"
+else
+  alias diff="diff -Nuar"
+fi
+if command -v lf > /dev/null 2>&1; then
+  alias ranger="lf"
+fi
+if command -v rg > /dev/null 2>&1; then
+  alias grep="rg"
+else
+  alias grep='egrep --colour=auto'
+fi
+if command -v bat > /dev/null 2>&1; then
+  alias cat='bat'
+fi
+if command -v exa > /dev/null 2>&1; then
+  alias ls='exa --icons'
+  alias l='exa -al --icons'
+  alias la='exa -a --color=always --group-directories-first --icons'  # all files and dirs
+  alias ll='exa -l --color=always --group-directories-first --icons'  # long format
+  alias lt='exa -aT --color=always --group-directories-first --icons' # tree listing
+fi
+if command -v nvim > /dev/null 2>&1; then
+  alias vim='nvim'
+fi
+if command -v tmate > /dev/null 2>&1; then
+  alias tmux='tmate -f ~/.tmux.conf'
+fi
+if command -v grim > /dev/null 2>&1; then
+  alias scrot='grim "desktop-$(date +"%Y%m%d%H%M").png"'
+  alias sscrot='grim -g "$(slurp)" "desktop-$(date +"%Y%m%d%H%M").png"'
+elif command -v scrot > /dev/null 2>&1; then
+ alias scrot='scrot desktop-%Y%m%d%H%M.png -q 100 -cd 3'
+fi
+if [ "$IS_MAC" = 1 ]; then
+  alias xclip='pbcopy'
+  alias ding='osascript -e 'display notification "command done"''
+else
+  if command -v wl-copy > /dev/null 2>&1; then
+    alias xclip='tee >(wl-copy) | wl-copy -p'
+  fi
+  alias ding='notify-send "command done"'
+fi
+
+# Easy extract
+extract () {
+  if [ -f $1 ] ; then
+      case $1 in
+            *.tar.bz2)      tar xvjf $1   ;;
+            *.tar.gz)       tar xvzf $1   ;;
+        *.tar.xz)       tar xvJf $1   ;;
+            *.bz2)          bunzip2 $1    ;;
+            *.rar)          unrar x $1    ;;
+            *.gz)           gunzip $1     ;;
+            *.tar)          tar xvf $1    ;;
+            *.tbz2)         tar xvjf $1   ;;
+            *.tgz)          tar xvzf $1   ;;
+        *.txz)          tar xvJf $1   ;;
+            *.rar)          unrar $1      ;;
+            *.zip)          unzip $1      ;;
+            *.Z)            uncompress $1 ;;
+            *.7z)           7z x $1       ;;
+          *)           echo "don't know how to extract '$1'..." ;;
+      esac
+  else
+      echo "'$1' is not a valid file!"
+  fi
+}
+
+# Makes directory then moves into it
+function mkcdr {
+    mkdir -p -v $1
+    cd $1
+}
+
+# Creates an archive from given directory
+mktar()  { tar cvf  "${1%%/}.tar"     "${1%%/}/"; }
+mktgz()  { tar cvzf "${1%%/}.tar.gz"  "${1%%/}/"; }
+mktbz()  { tar cvjf "${1%%/}.tar.bz2" "${1%%/}/"; }
+mkzip()  { 7z a -r  "${1%%/}.zip"     "${1%%/}/"; }
+mk7zip() { 7z a -r  "${1%%/}.7z"      "${1%%/}/"; }
+
